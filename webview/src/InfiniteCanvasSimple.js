@@ -804,6 +804,17 @@ class InputHandler {
         const rect = this.canvas.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
         const mouseY = e.clientY - rect.top;
+
+        // Right-click is exclusively for panning the canvas
+        if (e.button === 2) {
+            console.log('🤚 Right-click pan started');
+            this.isPanning = true;
+            this.isDragging = true;
+            this.hasMoved = false;
+            this.lastMouseX = mouseX;
+            this.lastMouseY = mouseY;
+            return;
+        }
         
         // Convert to canvas coordinates
         const canvasX = (mouseX - this.canvasState.offsetX) / this.canvasState.scale;
@@ -964,6 +975,8 @@ class InputHandler {
         if (this.isResizing) {
             this.canvas.style.cursor = this.resizeHandle.cursor;
         } else if (this.isDraggingScrollbar) {
+            this.canvas.style.cursor = 'grabbing';
+        } else if (this.isPanning) {
             this.canvas.style.cursor = 'grabbing';
         } else if (this.isConnecting) {
             this.canvas.style.cursor = 'crosshair';
@@ -1230,81 +1243,82 @@ class InputHandler {
     
     handleWheel(e) {
         e.preventDefault();
-        
+
         const rect = this.canvas.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
         const mouseY = e.clientY - rect.top;
-        
+
         // Convert to canvas coordinates
         const canvasX = (mouseX - this.canvasState.offsetX) / this.canvasState.scale;
         const canvasY = (mouseY - this.canvasState.offsetY) / this.canvasState.scale;
-        
-        // Check if mouse is over a node with scrollable content
-        const hoveredNode = this.canvasState.getNodeAt(canvasX, canvasY);
-        
-        if (hoveredNode && hoveredNode._maxScroll > 0 && !e.ctrlKey && !e.metaKey && Math.abs(e.deltaX) < Math.abs(e.deltaY)) {
-            // Scroll the node content (only when not holding Ctrl/Cmd and vertical scroll is dominant)
-            const scrollDelta = e.deltaY * 0.5; // Adjust scroll sensitivity
-            hoveredNode.scrollY = Math.max(0, Math.min(hoveredNode.scrollY + scrollDelta, hoveredNode._maxScroll));
-            console.log('📜 Scrolling node:', hoveredNode.id, 'scrollY:', hoveredNode.scrollY, 'maxScroll:', hoveredNode._maxScroll);
-            
-            // Request render for scroll
-            if (this.requestRender) {
-                this.requestRender();
-            }
-            return; // Don't zoom when scrolling node content
-        }
-        
-        // Detect trackpad two-finger pan (both deltaX and deltaY present with small values)
-        const isTrackpadPan = Math.abs(e.deltaX) > 0 && Math.abs(e.deltaY) > 0 && 
-                             Math.abs(e.deltaX) < 50 && Math.abs(e.deltaY) < 50 &&
-                             !e.ctrlKey && !e.metaKey;
-        
-        if (isTrackpadPan) {
-            // Two-finger trackpad pan
-            console.log('👋 Trackpad pan detected:', { deltaX: e.deltaX, deltaY: e.deltaY });
-            this.canvasState.offsetX -= e.deltaX;
-            this.canvasState.offsetY -= e.deltaY;
-            
-            // Update floating button position after pan
+
+        // Ctrl/Cmd + wheel -> zoom towards the mouse position
+        if (e.ctrlKey || e.metaKey) {
+            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+            const newScale = Math.max(0.1, Math.min(5, this.canvasState.scale * zoomFactor));
+
+            // Zoom towards mouse position
+            const scaleDiff = newScale - this.canvasState.scale;
+            this.canvasState.offsetX -= (mouseX - this.canvasState.offsetX) * scaleDiff / this.canvasState.scale;
+            this.canvasState.offsetY -= (mouseY - this.canvasState.offsetY) * scaleDiff / this.canvasState.scale;
+
+            this.canvasState.scale = newScale;
+            console.log('🔍 Zoom to:', newScale);
+
+            // Update floating button position after zoom
             this.canvasState.notifySelectionChange();
-            
-            // Update editor positions after pan
+
+            // Update editor positions after zoom
             this.updateEditorPositions();
-            
-            // Request render for pan
+
+            // Request render for zoom
             if (this.requestRender) {
                 this.requestRender();
             }
             return;
         }
-        
-        // Handle zoom (Ctrl/Cmd + wheel or pure vertical scroll with larger delta)
-        if (e.ctrlKey || e.metaKey || (Math.abs(e.deltaX) < Math.abs(e.deltaY) && Math.abs(e.deltaY) > 20)) {
-            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-            const newScale = Math.max(0.1, Math.min(5, this.canvasState.scale * zoomFactor));
-            
-            // Zoom towards mouse position
-            const scaleDiff = newScale - this.canvasState.scale;
-            this.canvasState.offsetX -= (mouseX - this.canvasState.offsetX) * scaleDiff / this.canvasState.scale;
-            this.canvasState.offsetY -= (mouseY - this.canvasState.offsetY) * scaleDiff / this.canvasState.scale;
-            
-            this.canvasState.scale = newScale;
-            console.log('🔍 Zoom to:', newScale);
-            
-            // Update floating button position after zoom
-            this.canvasState.notifySelectionChange();
-            
-            // Update editor positions after zoom
-            this.updateEditorPositions();
-            
-            // Request render for zoom
+
+        // Scroll the content of a hovered node that has scrollable content
+        const hoveredNode = this.canvasState.getNodeAt(canvasX, canvasY);
+        if (hoveredNode && hoveredNode._maxScroll > 0 && Math.abs(e.deltaX) < Math.abs(e.deltaY)) {
+            const scrollDelta = e.deltaY * 0.5; // Adjust scroll sensitivity
+            hoveredNode.scrollY = Math.max(0, Math.min(hoveredNode.scrollY + scrollDelta, hoveredNode._maxScroll));
+            console.log('📜 Scrolling node:', hoveredNode.id, 'scrollY:', hoveredNode.scrollY, 'maxScroll:', hoveredNode._maxScroll);
+
+            // Request render for scroll
             if (this.requestRender) {
                 this.requestRender();
             }
+            return; // Don't pan when scrolling node content
+        }
+
+        // Plain wheel -> pan the page (screen pixels, same direction as trackpad pan)
+        // Normalize deltaMode so mouse wheels and trackpads feel consistent
+        let dx = e.deltaX;
+        let dy = e.deltaY;
+        if (e.deltaMode === 1) { // lines -> pixels
+            dx *= 16;
+            dy *= 16;
+        } else if (e.deltaMode === 2) { // pages -> pixels
+            dx *= rect.width;
+            dy *= rect.height;
+        }
+
+        this.canvasState.offsetX -= dx;
+        this.canvasState.offsetY -= dy;
+
+        // Update floating button position after pan
+        this.canvasState.notifySelectionChange();
+
+        // Update editor positions after pan
+        this.updateEditorPositions();
+
+        // Request render for pan
+        if (this.requestRender) {
+            this.requestRender();
         }
     }
-    
+
     handlePinchZoom(e) {
         console.log('🤏 Pinch zoom:', e.scale);
         
@@ -3891,47 +3905,47 @@ class UIManager {
         
         // Create controls list
         const controlsList = [
-            { category: 'Mouse Controls', items: [
-                { action: 'Double-click empty area', description: 'Create new node' },
-                { action: 'Double-click node', description: 'Edit node text' },
-                { action: 'Click + drag node', description: 'Move node (buttons follow automatically)' },
-                { action: 'Left-click + drag empty area', description: 'Rubber band selection rectangle' },
-                { action: 'Alt + drag OR Middle mouse drag', description: 'Pan canvas' },
-                { action: 'Mouse wheel', description: 'Zoom in/out (buttons scale automatically)' },
-                { action: 'Mouse wheel on node', description: 'Scroll node content' }
+            { category: '鼠标操作', items: [
+                { action: '滚轮上下滑', description: '平移页面' },
+                { action: 'Ctrl/Cmd + 滚轮', description: '缩放画布（以鼠标为焦点）' },
+                { action: '悬停节点上滚轮', description: '滚动节点内容' },
+                { action: '左键单击节点', description: '选中节点' },
+                { action: '左键拖动节点', description: '移动节点（按钮自动跟随）' },
+                { action: '左键拖动空白处', description: '框选多个节点' },
+                { action: '右键拖动', description: '平移画布' },
+                { action: 'Alt + 拖动 或 中键拖动', description: '平移画布' },
+                { action: '拖动节点角落手柄', description: '调整节点大小' }
             ]},
-            { category: 'Trackpad Gestures', items: [
-                { action: 'Two-finger scroll', description: 'Pan canvas (Mac-style trackpad support)' },
-                { action: 'Two-finger pinch', description: 'Zoom in/out' },
-                { action: 'Ctrl + scroll', description: 'Zoom in/out' },
-                { action: 'Single finger drag', description: 'Selection rectangle (no panning conflict)' }
+            { category: '创建与编辑', items: [
+                { action: '双击空白处', description: '创建新节点' },
+                { action: '双击节点', description: '编辑节点文本' },
+                { action: '双击文件节点', description: '编辑文件内容' },
+                { action: '拖入文件', description: '创建文件节点' },
+                { action: '选中节点 → ✦ 按钮', description: '显示悬浮按钮（随缩放）' },
+                { action: '✦ 生成按钮', description: '从节点生成 AI 内容' },
+                { action: '👁️ 查看按钮', description: '弹窗查看节点内容' }
             ]},
-            { category: 'Multi-Selection', items: [
-                { action: 'Ctrl/Cmd + click node', description: 'Toggle individual node selection' },
-                { action: 'Shift + click node', description: 'Add node to current selection' },
-                { action: 'Drag in empty space', description: 'Rubber band rectangle selection' },
-                { action: 'Ctrl/Cmd + drag rectangle', description: 'Add nodes to existing selection' },
-                { action: 'Drag selected nodes', description: 'Move all selected nodes together' },
-                { action: 'Delete with multiple selected', description: 'Delete all selected nodes at once' }
+            { category: '连线', items: [
+                { action: 'Shift + 单击绿色圆点', description: '开始连线' },
+                { action: 'Shift + 拖动到另一节点', description: '创建连线' },
+                { action: '单击连线', description: '选中连线' }
             ]},
-            { category: 'Connections', items: [
-                { action: 'Shift + click green circle', description: 'Start connection' },
-                { action: 'Shift + drag to another node', description: 'Create connection' },
-                { action: 'Click connection line', description: 'Select connection' }
+            { category: '多选', items: [
+                { action: 'Ctrl/Cmd + 单击节点', description: '切换选中' },
+                { action: 'Shift + 单击节点', description: '追加到选中' },
+                { action: '拖动选中节点', description: '整体移动所有选中节点' }
             ]},
-            { category: 'Node Editing', items: [
-                { action: 'Click resize handles', description: 'Resize selected node' },
-                { action: 'Drag + drop .md files', description: 'Create file nodes' },
-                { action: 'Double-click file node', description: 'Edit file content' },
-                { action: 'Select single node → ✦ button', description: 'Floating buttons appear (scale with zoom)' },
-                { action: 'Click ✦ generate button', description: 'Generate AI content from node' },
-                { action: 'Click 👁️ view button', description: 'View content in modal (large content only)' }
+            { category: '触控板', items: [
+                { action: '双指滚动', description: '平移画布' },
+                { action: '双指捏合', description: '缩放画布' },
+                { action: 'Ctrl/Cmd + 滚动', description: '缩放画布' }
             ]},
-            { category: 'Keyboard Shortcuts', items: [
-                { action: 'Delete/Backspace', description: 'Delete selected nodes/connections' },
-                { action: 'Escape', description: 'Cancel connection mode' },
-                { action: 'Ctrl/Cmd + Enter', description: 'Save text (in edit mode)' },
-                { action: 'Tab', description: 'Indent text (in edit mode)' }
+            { category: '键盘快捷键', items: [
+                { action: 'Delete / Backspace', description: '删除选中节点/连线' },
+                { action: 'Escape', description: '取消连线' },
+                { action: 'Ctrl/Cmd + Enter', description: '保存文本（编辑模式）' },
+                { action: 'Tab', description: '缩进文本（编辑模式）' },
+                { action: 'Ctrl/Cmd + C / V', description: '复制 / 粘贴节点' }
             ]}
         ];
         

@@ -6,27 +6,27 @@ export function getProviderName(baseURL) {
 }
 
 export function getErrorMessage(error) {
-    let errorMessage = 'Failed to generate AI ideas. ';
+    let errorMessage = '生成 AI 想法失败。';
 
     // Check for specific error patterns
     const errorString = error.message || JSON.stringify(error) || '';
 
     if (errorString.includes('No auth credentials found') || errorString.includes('401')) {
-        errorMessage += 'Authentication failed. Please check your API key configuration.';
+        errorMessage += '身份验证失败，请检查你的 API 密钥配置。';
     } else if (errorString.includes('API key')) {
-        errorMessage += 'API key issue. Please verify your API key in the extension settings.';
+        errorMessage += 'API 密钥问题，请在扩展设置中核实你的 API 密钥。';
     } else if (errorString.includes('quota') || errorString.includes('insufficient_quota')) {
-        errorMessage += 'API quota exceeded. Please check your account limits.';
+        errorMessage += 'API 配额已用尽，请检查你的账户限额。';
     } else if (errorString.includes('network') || errorString.includes('fetch')) {
-        errorMessage += 'Network error. Please try again.';
+        errorMessage += '网络错误，请重试。';
     } else if (errorString.includes('unauthorized')) {
-        errorMessage += 'Unauthorized access. Please check your API key configuration.';
+        errorMessage += '未授权访问，请检查你的 API 密钥配置。';
     } else if (errorString.includes('429') || errorString.includes('rate limit')) {
-        errorMessage += 'Rate limit exceeded. Please wait and try again.';
+        errorMessage += '请求过于频繁，请稍后重试。';
     } else if (errorString.includes('model') && errorString.includes('not found')) {
-        errorMessage += 'The requested model is not available. Using fallback model.';
+        errorMessage += '请求的模型不可用，正在使用备用模型。';
     } else {
-        errorMessage += errorString || 'Unknown error occurred.';
+        errorMessage += errorString || '未知错误。';
     }
 
     return errorMessage;
@@ -75,7 +75,7 @@ export async function generateAIIdeasGroq(selectedNodeText, connectedNodes = [],
     // Check if API key is available
     if (!apiKey) {
         console.warn('❌ API key not available');
-        throw new Error('Please configure your API key in the extension settings to use AI features.');
+        throw new Error('请在扩展设置中配置你的 API 密钥以使用 AI 功能。');
     }
 
     // Construct messages array with connected nodes as conversation history

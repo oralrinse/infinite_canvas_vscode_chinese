@@ -138,9 +138,15 @@ export class InfiniteCanvas {
         const container = this.canvas.parentElement;
         const rect = container.getBoundingClientRect();
         
-        this.canvas.width = rect.width;
-        this.canvas.height = rect.height;
-        
+        // Account for HiDPI displays (devicePixelRatio) to avoid blurry rendering
+        const dpr = window.devicePixelRatio || 1;
+        // Match CSS size to the container; bitmap scales by dpr so CSS:physical stays 1:1
+        this.canvas.style.width = rect.width + 'px';
+        this.canvas.style.height = rect.height + 'px';
+        this.canvas.width = Math.round(rect.width * dpr);
+        this.canvas.height = Math.round(rect.height * dpr);
+        this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
         // Force re-render
         if (this.requestRender) {
             this.requestRender();
@@ -224,7 +230,7 @@ class CanvasState {
         this.onStateChange = null;
     }
     
-    createNode(text = 'New Node', x = 100, y = 100) {
+    createNode(text = '新节点', x = 100, y = 100) {
         console.log('🎨 Creating node:', { text, x, y });
         
         const node = {
@@ -566,7 +572,7 @@ class CanvasState {
                         // Load file content after adding to nodes
                         setTimeout(() => this.loadFileContent(node), 100);
                     } else {
-                        node.text = nodeData.text || 'New Node';
+                        node.text = nodeData.text || '新节点';
                     }
                     
                     // Load AI model information if available
@@ -1365,7 +1371,7 @@ class InputHandler {
             }
         } else {
             console.log('➕ Creating new node at:', { x: canvasX - 100, y: canvasY - 50 });
-            const newNode = this.canvasState.createNode('New Node', canvasX - 100, canvasY - 50);
+            const newNode = this.canvasState.createNode('新节点', canvasX - 100, canvasY - 50);
             console.log('🎉 New node created:', newNode);
         }
     }
@@ -1439,8 +1445,9 @@ class InputHandler {
             
             // Get the canvas center or use current mouse position as paste location
             const rect = this.canvas.getBoundingClientRect();
-            const centerX = (this.canvas.width / 2 - this.canvasState.offsetX) / this.canvasState.scale;
-            const centerY = (this.canvas.height / 2 - this.canvasState.offsetY) / this.canvasState.scale;
+            const dpr = window.devicePixelRatio || 1;
+            const centerX = (this.canvas.width / 2 / dpr - this.canvasState.offsetX) / this.canvasState.scale;
+            const centerY = (this.canvas.height / 2 / dpr - this.canvasState.offsetY) / this.canvasState.scale;
             
             // Calculate offset to avoid overlapping with original nodes
             const PASTE_OFFSET = 50;
@@ -1452,7 +1459,7 @@ class InputHandler {
             // Create new nodes from clipboard
             this.clipboard.forEach((nodeData, index) => {
                 const newNode = this.canvasState.createNode(
-                    nodeData.text || 'Pasted Node',
+                    nodeData.text || '粘贴的节点',
                     centerX + (index * PASTE_OFFSET),
                     centerY + (index * PASTE_OFFSET)
                 );
@@ -1526,7 +1533,7 @@ class InputHandler {
         
         const finishEditing = async () => {
             if (document.body.contains(textarea)) {
-                node.text = textarea.value || 'New Node';
+                node.text = textarea.value || '新节点';
                 node.isEditing = false;
                 document.body.removeChild(textarea);
                 
@@ -1676,8 +1683,8 @@ class InputHandler {
         toolbar.appendChild(separator);
         
         const saveBtn = document.createElement('button');
-        saveBtn.textContent = '💾 Save';
-        saveBtn.title = 'Save (Ctrl/Cmd+Enter)';
+        saveBtn.textContent = '💾 保存';
+        saveBtn.title = '保存（Ctrl/Cmd+Enter）';
         saveBtn.style.backgroundColor = '#0e7490';
         saveBtn.style.color = 'white';
         saveBtn.style.border = '1px solid #0891b2';
@@ -1687,8 +1694,8 @@ class InputHandler {
         saveBtn.style.fontSize = '11px';
         
         const cancelBtn = document.createElement('button');
-        cancelBtn.textContent = '❌ Cancel';
-        cancelBtn.title = 'Cancel (Escape)';
+        cancelBtn.textContent = '❌ 取消';
+        cancelBtn.title = '取消（Esc）';
         cancelBtn.style.backgroundColor = '#dc2626';
         cancelBtn.style.color = 'white';
         cancelBtn.style.border = '1px solid #ef4444';
@@ -1716,7 +1723,7 @@ class InputHandler {
         textarea.style.fontSize = '12px';
         textarea.style.fontFamily = 'Consolas, monospace';
         textarea.style.lineHeight = '1.4';
-        textarea.placeholder = 'Enter markdown content...\n\nTip: Ctrl+Enter to save, Esc to cancel';
+        textarea.placeholder = '输入 Markdown 内容...\n\n提示：Ctrl+Enter 保存，Esc 取消';
         
         // Assemble simple editor (no toolbar)
         editorContainer.appendChild(textarea);
@@ -1826,7 +1833,7 @@ class InputHandler {
         textarea.style.lineHeight = '1.4';
         textarea.style.resize = 'none';
         textarea.style.boxSizing = 'border-box';
-        textarea.placeholder = 'Enter markdown content...\n\nTip: Ctrl+Enter to save, Esc to cancel';
+        textarea.placeholder = '输入 Markdown 内容...\n\n提示：Ctrl+Enter 保存，Esc 取消';
         
         // Add textarea to container
         editorContainer.appendChild(textarea);
@@ -2006,7 +2013,7 @@ class InputHandler {
         const input = document.createElement('input');
         input.type = 'text';
         input.value = file.name;
-        input.placeholder = 'Enter workspace-relative path (e.g., docs/myfile.md)';
+        input.placeholder = '输入工作区相对路径（例如：docs/myfile.md）';
         input.style.position = 'absolute';
         input.style.left = screenX + 'px';
         input.style.top = screenY + 'px';
@@ -2435,8 +2442,9 @@ class CanvasRenderer {
         const gridSize = 50;
         const startX = -canvasState.offsetX / canvasState.scale;
         const startY = -canvasState.offsetY / canvasState.scale;
-        const endX = startX + canvas.width / canvasState.scale;
-        const endY = startY + canvas.height / canvasState.scale;
+        const dpr = window.devicePixelRatio || 1;
+        const endX = startX + canvas.width / dpr / canvasState.scale;
+        const endY = startY + canvas.height / dpr / canvasState.scale;
         
         ctx.strokeStyle = '#333333';
         ctx.lineWidth = 1 / canvasState.scale;
@@ -2875,7 +2883,7 @@ class CanvasRenderer {
         ctx.fillStyle = '#ffffff';
         ctx.font = '10px Segoe UI, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('View', viewButtonX + viewButtonWidth / 2, viewButtonY + viewButtonHeight / 2 + 2);
+        ctx.fillText('查看', viewButtonX + viewButtonWidth / 2, viewButtonY + viewButtonHeight / 2 + 2);
         
         // Store view button bounds for click detection
         node._viewButtonBounds = {
@@ -2948,7 +2956,7 @@ class CanvasRenderer {
             ctx.font = '16px Segoe UI, sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText('✏️ Editing...', node.x + node.width / 2, contentY + contentHeight / 2);
+            ctx.fillText('✏️ 编辑中...', node.x + node.width / 2, contentY + contentHeight / 2);
         } else if (!node.isContentLoaded) {
             // Draw loading indicator
             ctx.fillStyle = '#3a3a3a';
@@ -2958,7 +2966,7 @@ class CanvasRenderer {
             ctx.font = '16px Segoe UI, sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText('Loading...', node.x + node.width / 2, contentY + contentHeight / 2);
+            ctx.fillText('加载中...', node.x + node.width / 2, contentY + contentHeight / 2);
         } else if (node.content) {
             // Draw content preview with scrolling
             ctx.fillStyle = '#2d2d2d';
@@ -2993,7 +3001,7 @@ class CanvasRenderer {
             ctx.font = '16px Segoe UI, sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText('⚠️ File not found', node.x + node.width / 2, contentY + contentHeight / 2);
+            ctx.fillText('⚠️ 未找到文件', node.x + node.width / 2, contentY + contentHeight / 2);
         }
         
         ctx.restore();
@@ -3397,7 +3405,7 @@ class UIManager {
         const generateBtn = document.createElement('button');
         generateBtn.id = 'floating-generate-btn';
         generateBtn.innerHTML = '✦';
-        generateBtn.title = 'Generate AI ideas';
+        generateBtn.title = '生成 AI 想法';
         generateBtn.style.cssText = `
             position: absolute;
             width: 36px;
@@ -3448,7 +3456,7 @@ class UIManager {
             if (this.canvas.aiManager) {
                 this.canvas.aiManager.generateAI();
             } else {
-                this.showNotification('AI functionality not available', 'error');
+                this.showNotification('AI 功能不可用', 'error');
             }
         });
         
@@ -3473,7 +3481,7 @@ class UIManager {
         const viewBtn = document.createElement('button');
         viewBtn.id = 'floating-view-btn';
         viewBtn.innerHTML = '⛶';
-        viewBtn.title = 'View node content';
+        viewBtn.title = '查看节点内容';
         viewBtn.style.cssText = `
             position: absolute;
             width: 36px;
@@ -3549,7 +3557,7 @@ class UIManager {
         const configBtn = document.createElement('button');
         configBtn.id = 'config-button';
         configBtn.innerHTML = '⚙️';
-        configBtn.title = 'Configuration';
+        configBtn.title = '配置';
         configBtn.style.cssText = `
             position: fixed;
             top: 20px;
@@ -3611,7 +3619,7 @@ class UIManager {
         
         // Title
         const title = document.createElement('h3');
-        title.textContent = '⚙️ AI Configuration';
+        title.textContent = '⚙️ AI 配置';
         title.style.cssText = `
             margin: 0 0 16px 0;
             color: #e0e0e0;
@@ -3626,7 +3634,7 @@ class UIManager {
         baseUrlSection.style.cssText = `margin-bottom: 16px;`;
         
         const baseUrlLabel = document.createElement('label');
-        baseUrlLabel.textContent = 'Base URL:';
+        baseUrlLabel.textContent = '接口地址：';
         baseUrlLabel.style.cssText = `
             display: block;
             color: #d0d0d0;
@@ -3692,7 +3700,7 @@ class UIManager {
         apiKeySection.style.cssText = `margin-bottom: 16px;`;
         
         const apiKeyLabel = document.createElement('label');
-        apiKeyLabel.textContent = 'API Key:';
+        apiKeyLabel.textContent = 'API 密钥：';
         apiKeyLabel.style.cssText = `
             display: block;
             color: #d0d0d0;
@@ -3705,7 +3713,7 @@ class UIManager {
         apiKeyInput.type = 'password';
         apiKeyInput.id = 'api-key-input';
         apiKeyInput.value = localStorage.getItem('ai-api-key') || '';
-        apiKeyInput.placeholder = 'Enter your API key';
+        apiKeyInput.placeholder = '请输入你的 API 密钥';
         apiKeyInput.style.cssText = `
             width: 100%;
             padding: 8px;
@@ -3722,7 +3730,7 @@ class UIManager {
         modelsSection.style.cssText = `margin-bottom: 16px;`;
         
         const modelsLabel = document.createElement('label');
-        modelsLabel.textContent = 'AI Models:';
+        modelsLabel.textContent = 'AI 模型：';
         modelsLabel.style.cssText = `
             display: block;
             color: #d0d0d0;
@@ -3753,7 +3761,7 @@ class UIManager {
         
         const modelInput = document.createElement('input');
         modelInput.type = 'text';
-        modelInput.placeholder = 'e.g. openai/gpt-4o';
+        modelInput.placeholder = '例如：openai/gpt-4o';
         modelInput.style.cssText = `
             flex: 1;
             padding: 4px 6px;
@@ -3809,7 +3817,7 @@ class UIManager {
         `;
 
         const selectAllBtn = document.createElement('button');
-        selectAllBtn.textContent = 'Select All';
+        selectAllBtn.textContent = '全选';
         selectAllBtn.style.cssText = `
             flex: 1;
             padding: 4px 8px;
@@ -3823,7 +3831,7 @@ class UIManager {
         `;
 
         const deselectAllBtn = document.createElement('button');
-        deselectAllBtn.textContent = 'Deselect All';
+        deselectAllBtn.textContent = '取消全选';
         deselectAllBtn.style.cssText = `
             flex: 1;
             padding: 4px 8px;
@@ -3861,7 +3869,7 @@ class UIManager {
         controlsSection.style.cssText = `margin-bottom: 16px;`;
         
         const controlsLabel = document.createElement('label');
-        controlsLabel.textContent = '🎮 Canvas Controls:';
+        controlsLabel.textContent = '🎮 画布控制：';
         controlsLabel.style.cssText = `
             display: block;
             color: #d0d0d0;
@@ -3994,7 +4002,7 @@ class UIManager {
         `;
         
         const saveButton = document.createElement('button');
-        saveButton.textContent = 'Save';
+        saveButton.textContent = '保存';
         saveButton.style.cssText = `
             padding: 6px 12px;
             background: #667eea;
@@ -4007,7 +4015,7 @@ class UIManager {
         `;
         
         const cancelButton = document.createElement('button');
-        cancelButton.textContent = 'Cancel';
+        cancelButton.textContent = '取消';
         cancelButton.style.cssText = `
             padding: 6px 12px;
             background: #666;
@@ -4031,7 +4039,7 @@ class UIManager {
                 localStorage.setItem('ai-api-key', apiKey);
             }
             
-            this.showNotification('Configuration saved successfully!', 'success');
+            this.showNotification('配置保存成功！', 'success');
             this.toggleConfigPanel();
         });
         

@@ -33,7 +33,7 @@ export class AIManager {
     async generateAI() {
         if (this.canvasState.selectedNodes.length === 0) {
             if (this.uiManager && this.uiManager.showNotification) {
-                this.uiManager.showNotification('Please select a node first to generate connected ideas', 'warning');
+                this.uiManager.showNotification('请先选择一个节点，以便生成关联想法', 'warning');
             } else {
                 console.warn('Please select a node first to generate connected ideas');
             }
@@ -42,7 +42,7 @@ export class AIManager {
 
         if (this.canvasState.selectedNodes.length > 1) {
             if (this.uiManager && this.uiManager.showNotification) {
-                this.uiManager.showNotification('Please select only one node to generate ideas. AI generation works with single nodes.', 'warning');
+                this.uiManager.showNotification('请仅选择一个节点来生成想法，AI 生成仅支持单个节点。', 'warning');
             } else {
                 console.warn('Please select only one node to generate ideas');
             }
@@ -59,7 +59,7 @@ export class AIManager {
         
         if (!hasText && !hasFile && !hasFullPath && !isFileNode) {
             if (this.uiManager && this.uiManager.showNotification) {
-                this.uiManager.showNotification('Selected node has no content to generate ideas from', 'warning');
+                this.uiManager.showNotification('所选节点没有可用于生成想法的内容', 'warning');
             } else {
                 console.warn('Selected node has no content');
             }
@@ -73,7 +73,7 @@ export class AIManager {
 
         if (sourceNode.isGeneratingAI) {
             if (this.uiManager && this.uiManager.showNotification) {
-                this.uiManager.showNotification('AI generation already in progress for this node...', 'info');
+                this.uiManager.showNotification('该节点的 AI 生成正在进行中...', 'info');
             } else {
                 console.info('AI generation already in progress for this node...');
             }
@@ -127,7 +127,7 @@ export class AIManager {
             if (models.length === 0) {
                 console.warn('❌ No active models found for generation');
                 if (this.uiManager && this.uiManager.showNotification) {
-                    this.uiManager.showNotification('No active models selected. Please configure your AI models first.', 'warning');
+                    this.uiManager.showNotification('未选择任何活跃模型，请先配置 AI 模型。', 'warning');
                 } else {
                     console.warn('No active models selected');
                 }

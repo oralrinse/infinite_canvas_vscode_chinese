@@ -1,7 +1,7 @@
 {
   "name": "infinite-canvas",
-  "displayName": "Infinite Canvas",
-  "description": "A powerful visual canvas editor for VS Code with full Obsidian Canvas compatibility. Create infinite mind maps, diagrams, and visual workflows with AI-powered content generation and markdown support.",
+  "displayName": "Infinite Canvas 无限画布",
+  "description": "功能强大的 VS Code 可视化画布编辑器，完全兼容 Obsidian Canvas。支持创建无限思维导图、图表和可视化工作流，内置 AI 内容生成与 Markdown 支持。",
   "version": "0.1.5",
   "engines": {
     "vscode": "^1.74.0"
@@ -26,7 +26,12 @@
     "markdown",
     "graph",
     "visualization",
-    "workflow"
+    "workflow",
+    "中文",
+    "无限画布",
+    "思维导图",
+    "白板",
+    "whiteboard"
   ],
   "main": "./out/extension.js",
   "activationEvents": [
@@ -49,7 +54,7 @@
     "customEditors": [
       {
         "viewType": "infinite-canvas.canvasEditor",
-        "displayName": "Infinite Canvas",
+        "displayName": "无限画布",
         "selector": [
           {
             "filenamePattern": "*.canvas"
@@ -69,8 +74,8 @@
     "commands": [
       {
         "command": "infinite-canvas.newCanvas",
-        "title": "New Canvas",
-        "category": "Infinite Canvas"
+        "title": "新建画布",
+        "category": "无限画布"
       }
     ],
     "menus": {
@@ -82,13 +87,13 @@
       ]
     },
     "configuration": {
-      "title": "Infinite Canvas",
+      "title": "无限画布",
       "properties": {
         "infinite-canvas.groqApiKey": {
           "type": "string",
           "default": "",
-          "description": "OpenRouter API key for AI-powered idea generation (optional - fallback to mock responses if not provided)",
-          "markdownDescription": "OpenRouter API key for AI-powered idea generation. Get your free API key at [openrouter.ai](https://openrouter.ai). If not provided, the extension will use mock responses."
+          "description": "用于 AI 智能生成想法的 OpenRouter API 密钥（可选，未提供时使用模拟响应）",
+          "markdownDescription": "用于 AI 智能生成想法的 OpenRouter API 密钥。可在 [openrouter.ai](https://openrouter.ai) 免费获取。若未提供，扩展将使用模拟响应。"
         }
       }
     }
@@ -105,16 +110,16 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/lout33/infinite_canvas_vscode"
+    "url": "https://github.com/oralrinse/infinite_canvas_vscode_chinese"
   },
-  "homepage": "https://github.com/lout33/infinite_canvas_vscode#readme",
+  "homepage": "https://github.com/oralrinse/infinite_canvas_vscode_chinese#readme",
   "bugs": {
-    "url": "https://github.com/lout33/infinite_canvas_vscode/issues"
+    "url": "https://github.com/oralrinse/infinite_canvas_vscode_chinese/issues"
   },
-  "publisher": "LuisFernando",
+  "publisher": "oralrinse",
   "license": "MIT",
   "author": {
-    "name": "Infinite Canvas Team"
+    "name": "oralrinse"
   },
   "galleryBanner": {
     "color": "#2D3748",

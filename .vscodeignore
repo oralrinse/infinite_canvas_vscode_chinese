@@ -17,8 +17,13 @@ coverage
 .github/**
 docs/**
 test-*.canvas
+test1.canvas
 fix-test.canvas
 unified-config-test.canvas
+CLAUDE.md
+DEVELOPMENT.md
+.mcp.json
+*.vsix
 *.log
 .DS_Store
 **/.DS_Store

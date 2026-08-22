@@ -15,16 +15,16 @@ export function activate(context: vscode.ExtensionContext) {
     const newCanvasCommand = vscode.commands.registerCommand('infinite-canvas.newCanvas', async () => {
         const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
         if (!workspaceFolder) {
-            vscode.window.showErrorMessage('Please open a workspace to create a new canvas');
+            vscode.window.showErrorMessage('请先打开工作区以创建新画布');
             return;
         }
 
         const fileName = await vscode.window.showInputBox({
-            prompt: 'Enter canvas file name',
+            prompt: '输入画布文件名',
             value: 'untitled.canvas',
             validateInput: (value) => {
                 if (!value.endsWith('.canvas')) {
-                    return 'File must have .canvas extension';
+                    return '文件必须以 .canvas 扩展名结尾';
                 }
                 return null;
             }
@@ -186,7 +186,7 @@ class CanvasEditorProvider implements vscode.CustomTextEditorProvider {
             webviewPanel.webview.postMessage({
                 type: 'fileContentError',
                 nodeId: nodeId,
-                error: `Failed to load file: ${filePath}`
+                error: `加载文件失败：${filePath}`
             });
         }
     }
@@ -259,7 +259,7 @@ class CanvasEditorProvider implements vscode.CustomTextEditorProvider {
             webviewPanel.webview.postMessage({
                 type: 'fileContentError',
                 nodeId: nodeId,
-                error: `Failed to save file: ${filePath}`
+                error: `保存文件失败：${filePath}`
             });
         }
     }
@@ -296,7 +296,7 @@ class CanvasEditorProvider implements vscode.CustomTextEditorProvider {
             
         } catch (error) {
             console.error('Error creating file:', error);
-            vscode.window.showErrorMessage(`Failed to create file: ${filePath}`);
+            vscode.window.showErrorMessage(`创建文件失败：${filePath}`);
         }
     }
 
@@ -310,13 +310,13 @@ class CanvasEditorProvider implements vscode.CustomTextEditorProvider {
         const nonce = this.getNonce();
 
         return `<!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}' 'unsafe-inline'; connect-src https:; img-src ${webview.cspSource} https: data:;">
     <link href="${styleUri}" rel="stylesheet">
-    <title>Infinite Canvas</title>
+    <title>无限画布</title>
     
     <style>
         body {
